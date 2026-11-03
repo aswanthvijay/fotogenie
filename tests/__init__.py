@@ -1,0 +1,1 @@
+"""Fotogenie Test Suite"""

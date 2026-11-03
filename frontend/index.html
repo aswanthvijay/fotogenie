@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fotogenie</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col font-sans">
+  <header class="border-b border-zinc-800/80 px-6 py-4 flex items-center justify-between bg-zinc-900/50">
+    <div class="flex items-center gap-2.5">
+      <span class="text-2xl">✨</span>
+      <h1 class="text-lg font-semibold tracking-tight">Fotogenie</h1>
+    </div>
+    <div id="statusBadge" class="text-xs px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30">
+      🟡 Connecting to AI Engine...
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-6xl w-full mx-auto px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+    <div class="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4 flex flex-col justify-between">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-medium text-zinc-300">1. Your Reference Photo</span>
+        <span id="lockBadge" class="hidden text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+          ✓ Face, Skin Tone & Body Locked
+        </span>
+      </div>
+
+      <label id="dropArea" class="flex-1 min-h-[380px] border-2 border-dashed border-zinc-700 hover:border-violet-500 rounded-xl flex flex-col items-center justify-center cursor-pointer transition relative overflow-hidden bg-zinc-950/60">
+        <input id="fileInput" type="file" accept="image/*" class="hidden" />
+        <div id="uploadPrompt" class="text-center p-6">
+          <div class="text-4xl mb-2">📸</div>
+          <p class="text-sm font-medium text-zinc-200">Click or Drop Reference Photo</p>
+          <p class="text-xs text-zinc-500 mt-1">Face, skin tone & body proportions lock automatically</p>
+        </div>
+        <img id="refPreview" class="hidden w-full h-[420px] object-contain" />
+      </label>
+    </div>
+
+    <div class="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4 flex flex-col justify-between">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-medium text-zinc-300">2. Generated Scene</span>
+        <a id="downloadBtn" download="fotogenie-portrait.png" class="hidden text-xs px-3 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-medium transition">
+          ⬇ Download HD
+        </a>
+      </div>
+
+      <div class="flex-1 min-h-[380px] rounded-xl bg-zinc-950/60 border border-zinc-800/80 flex flex-col items-center justify-center relative overflow-hidden">
+        <div id="emptyState" class="text-center p-6 text-zinc-500 text-sm">
+          Your generated full scene will appear here
+        </div>
+        <div id="loadingState" class="hidden text-center p-6">
+          <div class="w-10 h-10 border-4 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+          <p class="text-sm text-zinc-200 font-medium">Rendering 24-Step HQ Scene on RTX 3060...</p>
+          <p class="text-xs text-zinc-400 mt-1">Harmonizing natural lighting, skin pores & facial geometry (~15s)</p>
+        </div>
+        <img id="genOutput" class="hidden w-full h-[420px] object-contain" />
+      </div>
+    </div>
+  </main>
+
+  <section class="max-w-6xl w-full mx-auto px-6 pb-8 space-y-3">
+    <div id="errorBox" class="hidden p-3 rounded-xl bg-red-500/15 border border-red-500/40 text-red-200 text-xs"></div>
+
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-1.5 bg-zinc-900 p-1 rounded-xl border border-zinc-800">
+        <button data-aspect="4:5" class="aspect-btn px-3 py-1 rounded-lg text-xs font-medium bg-violet-600 text-white">Portrait 4:5</button>
+        <button data-aspect="9:16" class="aspect-btn px-3 py-1 rounded-lg text-xs font-medium text-zinc-400 hover:text-white">Full Body 9:16</button>
+        <button data-aspect="1:1" class="aspect-btn px-3 py-1 rounded-lg text-xs font-medium text-zinc-400 hover:text-white">Square 1:1</button>
+        <button data-aspect="16:9" class="aspect-btn px-3 py-1 rounded-lg text-xs font-medium text-zinc-400 hover:text-white">Cinema 16:9</button>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button class="scene-chip text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300" data-text="full body cinematic portrait in a luxury modern lounge, soft ambient warm lighting">Luxury Lounge</button>
+        <button class="scene-chip text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300" data-text="standing outdoors in a sunlit garden at golden hour, soft natural sunlight, bokeh background">Golden Hour</button>
+        <button class="scene-chip text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300" data-text="professional studio portrait photoshoot, diffused softbox lighting, elegant outfit">Studio Shoot</button>
+        <button class="scene-chip text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300" data-text="walking on a tropical beach at sunset, gentle ocean waves, warm golden breeze">Beach Sunset</button>
+      </div>
+
+      <button id="toggleSlidersBtn" class="text-xs px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200">
+        ⚙ Adjust Body (Optional)
+      </button>
+    </div>
+
+    <div id="slidersDrawer" class="hidden bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-xs font-medium text-zinc-300">Leave at 0 to match your photo automatically, or slide to adjust:</span>
+        <button id="resetSlidersBtn" class="text-xs text-violet-400 hover:underline">Reset All to Match Photo</button>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-xs">
+        <div>
+          <label class="block text-zinc-400 mb-1">Height: <span id="val-height">Match</span></label>
+          <input id="sl-height" type="range" min="-2" max="2" step="0.5" value="0" class="w-full accent-violet-500" />
+        </div>
+        <div>
+          <label class="block text-zinc-400 mb-1">Bust Size: <span id="val-bust">Match</span></label>
+          <input id="sl-bust" type="range" min="-2" max="2" step="0.5" value="0" class="w-full accent-violet-500" />
+        </div>
+        <div>
+          <label class="block text-zinc-400 mb-1">Waist: <span id="val-waist">Match</span></label>
+          <input id="sl-waist" type="range" min="-2" max="2" step="0.5" value="0" class="w-full accent-violet-500" />
+        </div>
+        <div>
+          <label class="block text-zinc-400 mb-1">Hips: <span id="val-hips">Match</span></label>
+          <input id="sl-hips" type="range" min="-2" max="2" step="0.5" value="0" class="w-full accent-violet-500" />
+        </div>
+        <div>
+          <label class="block text-zinc-400 mb-1">Build: <span id="val-build">Match</span></label>
+          <input id="sl-build" type="range" min="-2" max="2" step="0.5" value="0" class="w-full accent-violet-500" />
+        </div>
+      </div>
+    </div>
+
+    <div class="flex gap-3">
+      <input id="promptInput" type="text" placeholder="Describe the scene, outfit, pose, or any body changes..." class="flex-1 bg-zinc-900 border border-zinc-700 focus:border-violet-500 rounded-xl px-4 py-3 text-sm outline-none" />
+      <button id="generateBtn" class="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-sm transition whitespace-nowrap">
+        ✨ Generate Scene
+      </button>
+    </div>
+  </section>
+
+  <script>
+    let selectedFile = null;
+    let selectedAspect = "4:5";
+
+    const fileInput = document.getElementById("fileInput");
+    const refPreview = document.getElementById("refPreview");
+    const uploadPrompt = document.getElementById("uploadPrompt");
+    const lockBadge = document.getElementById("lockBadge");
+    const genOutput = document.getElementById("genOutput");
+    const emptyState = document.getElementById("emptyState");
+    const loadingState = document.getElementById("loadingState");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const errorBox = document.getElementById("errorBox");
+
+    fileInput.addEventListener("change", (e) => {
+      if (e.target.files && e.target.files[0]) {
+        selectedFile = e.target.files[0];
+        refPreview.src = URL.createObjectURL(selectedFile);
+        refPreview.classList.remove("hidden");
+        uploadPrompt.classList.add("hidden");
+        lockBadge.classList.remove("hidden");
+      }
+    });
+
+    document.querySelectorAll(".aspect-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".aspect-btn").forEach(b => {
+          b.className = "aspect-btn px-3 py-1 rounded-lg text-xs font-medium text-zinc-400 hover:text-white";
+        });
+        btn.className = "aspect-btn px-3 py-1 rounded-lg text-xs font-medium bg-violet-600 text-white";
+        selectedAspect = btn.dataset.aspect;
+      });
+    });
+
+    document.querySelectorAll(".scene-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        document.getElementById("promptInput").value = chip.dataset.text;
+      });
+    });
+
+    document.getElementById("toggleSlidersBtn").addEventListener("click", () => {
+      document.getElementById("slidersDrawer").classList.toggle("hidden");
+    });
+
+    const sliderKeys = ["height", "bust", "waist", "hips", "build"];
+    sliderKeys.forEach(k => {
+      const el = document.getElementById(`sl-${k}`);
+      const lbl = document.getElementById(`val-${k}`);
+      el.addEventListener("input", () => {
+        lbl.textContent = el.value === "0" ? "Match" : (el.value > 0 ? `+${el.value}` : el.value);
+      });
+    });
+
+    document.getElementById("resetSlidersBtn").addEventListener("click", () => {
+      sliderKeys.forEach(k => {
+        document.getElementById(`sl-${k}`).value = "0";
+        document.getElementById(`val-${k}`).textContent = "Match";
+      });
+    });
+
+    async function pollStatus() {
+      try {
+        const r = await fetch("/api/status");
+        const d = await r.json();
+        const badge = document.getElementById("statusBadge");
+        if (d.online) {
+          badge.className = "text-xs px-3 py-1.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30";
+          badge.textContent = "🟢 AI Ready (RTX 3060)";
+        } else {
+          badge.className = "text-xs px-3 py-1.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30";
+          badge.textContent = "🟡 Starting ComfyUI Engine...";
+        }
+      } catch {}
+    }
+    setInterval(pollStatus, 4000);
+    pollStatus();
+
+    document.getElementById("generateBtn").addEventListener("click", async () => {
+      errorBox.classList.add("hidden");
+      if (!selectedFile) {
+        errorBox.textContent = "Please upload a reference photo on the left first.";
+        errorBox.classList.remove("hidden");
+        return;
+      }
+      const prompt = document.getElementById("promptInput").value.trim() || "cinematic portrait photoshoot, soft natural lighting";
+      const sliders = {};
+      sliderKeys.forEach(k => sliders[k] = parseFloat(document.getElementById(`sl-${k}`).value));
+
+      const fd = new FormData();
+      fd.append("image", selectedFile);
+      fd.append("prompt", prompt);
+      fd.append("aspect", selectedAspect);
+      fd.append("sliders", JSON.stringify(sliders));
+
+      emptyState.classList.add("hidden");
+      genOutput.classList.add("hidden");
+      loadingState.classList.remove("hidden");
+      downloadBtn.classList.add("hidden");
+
+      try {
+        const resp = await fetch("/api/generate", { method: "POST", body: fd });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || "Generation failed");
+        genOutput.src = data.image_base64;
+        genOutput.classList.remove("hidden");
+        downloadBtn.href = data.image_base64;
+        downloadBtn.classList.remove("hidden");
+      } catch (err) {
+        errorBox.textContent = err.message;
+        errorBox.classList.remove("hidden");
+        emptyState.classList.remove("hidden");
+      } finally {
+        loadingState.classList.add("hidden");
+      }
+    });
+  </script>
+</body>
+</html>

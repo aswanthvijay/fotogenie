@@ -1,0 +1,42 @@
+# Virtual Environment
+venv/
+env/
+.venv/
+
+# Cloned Sub-repositories & Engines
+ComfyUI/
+fashn-vton-1.5/
+
+# Model Weights, Checkpoints & Embeddings
+*.safetensors
+*.bin
+*.onnx
+*.pt
+*.pth
+*.ckpt
+models/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# User Uploads and Render Outputs
+uploads/*
+!uploads/.gitkeep
+outputs/*
+!outputs/.gitkeep
+
+# IDE & OS Files
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+[Dd]esktop.ini
+.DS_Store
+
+# Logs
+*.log
