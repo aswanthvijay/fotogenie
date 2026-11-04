@@ -1,239 +1,1135 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fotogenie</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Fotogenie · AI Portrait Studio</title>
+  <meta name="description" content="Fotogenie is a local AI portrait studio. Generate a new scene around your face, identity-verified, entirely on your own GPU." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%237c3aed'/%3E%3Ctext x='50' y='70' font-size='54' text-anchor='middle' fill='white'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #08070b;
+      --card: rgba(255, 255, 255, 0.045);
+      --card-strong: rgba(255, 255, 255, 0.065);
+      --border: rgba(255, 255, 255, 0.09);
+      --border-strong: rgba(255, 255, 255, 0.16);
+      --text: #f4f2f7;
+      --muted: #a7a3b3;
+      --muted-2: #736f80;
+      --violet: #8b5cf6;
+      --fuchsia: #d946ef;
+      --amber: #f59e0b;
+      --emerald: #34d399;
+      --rose: #fb7185;
+      --grad: linear-gradient(135deg, #7c3aed 0%, #d946ef 52%, #f59e0b 100%);
+      --grad-soft: linear-gradient(135deg, rgba(124, 58, 237, 0.26), rgba(217, 70, 239, 0.18), rgba(245, 158, 11, 0.14));
+      --shadow: 0 26px 80px -28px rgba(0, 0, 0, 0.9);
+      --radius: 28px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+    ::selection { background: rgba(217, 70, 239, 0.35); color: #fff; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: #08070b; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 999px; border: 2px solid #08070b; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+    .hidden { display: none !important; }
+    .muted { color: var(--muted-2); font-weight: 500; }
+
+    .bg-orbs {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+      background:
+        radial-gradient(52vw 52vw at 8% -8%, rgba(124, 58, 237, 0.26), transparent 62%),
+        radial-gradient(44vw 44vw at 104% 12%, rgba(217, 70, 239, 0.2), transparent 60%),
+        radial-gradient(46vw 46vw at 50% 118%, rgba(245, 158, 11, 0.12), transparent 62%);
+    }
+    .bg-orbs::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+      background-size: 26px 26px;
+      -webkit-mask-image: radial-gradient(60% 60% at 50% 40%, #000 0%, transparent 100%);
+      mask-image: radial-gradient(60% 60% at 50% 40%, #000 0%, transparent 100%);
+    }
+
+    .app {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 16px 26px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8, 7, 11, 0.55);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+      color: #fff;
+      background: var(--grad);
+      box-shadow: 0 10px 30px -8px rgba(217, 70, 239, 0.7);
+    }
+    .brand-name { display: block; font-family: 'Fraunces', Georgia, serif; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.1; }
+    .brand-sub { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.22em; color: var(--muted-2); margin-top: 3px; }
+    .header-right { display: flex; align-items: center; gap: 14px; }
+    .header-note { font-size: 11.5px; color: var(--muted-2); letter-spacing: 0.02em; display: none; }
+    @media (min-width: 900px) { .header-note { display: inline; } }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 8px 13px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.045);
+      white-space: nowrap;
+    }
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: currentColor;
+      animation: pulse 2.2s ease-in-out infinite;
+    }
+    .status-ready { color: var(--emerald); border-color: rgba(52, 211, 153, 0.35); background: rgba(52, 211, 153, 0.1); }
+    .status-ready .status-dot { box-shadow: 0 0 12px rgba(52, 211, 153, 0.9); }
+    .status-connecting { color: #fbbf24; border-color: rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.1); }
+    .status-busy { color: #e879f9; border-color: rgba(217, 70, 239, 0.4); background: rgba(217, 70, 239, 0.1); }
+    .status-busy .status-dot { animation-duration: 1s; }
+    .status-error { color: var(--rose); border-color: rgba(251, 113, 133, 0.35); background: rgba(251, 113, 133, 0.1); }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.8); } }
+
+    .studio-main {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 22px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .stage-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+    @media (min-width: 880px) { .stage-grid { grid-template-columns: 1fr 1fr; } }
+
+    .glass-card {
+      position: relative;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.022));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--shadow);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+    .card-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .card-title h2 { margin: 0; font-size: 13.5px; font-weight: 700; letter-spacing: 0.01em; white-space: nowrap; }
+    .step-badge {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 11px;
+      color: var(--muted-2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .dropzone {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 360px;
+      border-radius: 20px;
+      border: 1.5px dashed rgba(255, 255, 255, 0.16);
+      background: radial-gradient(120% 120% at 50% 0%, rgba(124, 58, 237, 0.1), rgba(255, 255, 255, 0.02) 60%);
+      cursor: pointer;
+      overflow: hidden;
+      text-align: center;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s, background 0.2s;
+    }
+    .dropzone:hover { border-color: rgba(217, 70, 239, 0.6); box-shadow: 0 0 0 4px rgba(217, 70, 239, 0.08), 0 20px 60px -24px rgba(217, 70, 239, 0.45); transform: translateY(-1px); }
+    .dropzone.is-drag { border-color: var(--fuchsia); border-style: solid; background: radial-gradient(120% 120% at 50% 0%, rgba(217, 70, 239, 0.18), rgba(255, 255, 255, 0.03) 60%); }
+    .dropzone-prompt { padding: 28px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .dropzone-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 20px;
+      display: grid;
+      place-items: center;
+      font-size: 26px;
+      color: #fff;
+      background: var(--grad-soft);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: inset 0 0 24px rgba(217, 70, 239, 0.2);
+    }
+    .dropzone-title { margin: 0; font-size: 15px; font-weight: 700; }
+    .dropzone-sub { margin: 0; font-size: 12px; color: var(--muted); max-width: 260px; line-height: 1.5; }
+    .dropzone-cta {
+      margin-top: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 9px 16px;
+      border-radius: 999px;
+      background: var(--grad);
+      color: #fff;
+      box-shadow: 0 10px 26px -10px rgba(217, 70, 239, 0.8);
+    }
+
+    .preview-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      padding: 10px;
+      border-radius: 20px;
+    }
+
+    .result-frame {
+      position: relative;
+      flex: 1;
+      min-height: 360px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      background: radial-gradient(120% 120% at 50% 0%, rgba(255, 255, 255, 0.03), rgba(0, 0, 0, 0.25));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .empty-state { text-align: center; color: var(--muted-2); font-size: 13px; padding: 24px; }
+    .empty-icon { display: block; font-size: 30px; color: rgba(255, 255, 255, 0.18); margin-bottom: 10px; }
+    .empty-state p { margin: 4px 0; }
+
+    .loading-state { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; }
+    .shimmer {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(110deg, rgba(255, 255, 255, 0.02) 8%, rgba(255, 255, 255, 0.09) 18%, rgba(255, 255, 255, 0.02) 33%);
+      background-size: 220% 100%;
+      animation: shimmer 1.6s linear infinite;
+    }
+    @keyframes shimmer { 0% { background-position: 120% 0; } 100% { background-position: -20% 0; } }
+    .loading-content { position: relative; padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .spinner { width: 44px; height: 44px; border-radius: 999px; border: 3px solid rgba(255, 255, 255, 0.1); border-top-color: var(--fuchsia); animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-title { margin: 0; font-size: 14px; font-weight: 700; }
+    .loading-sub { margin: 0; font-size: 11.5px; color: var(--muted); max-width: 240px; line-height: 1.5; }
+
+    .card-foot { margin: 12px 0 0; font-size: 11.5px; color: var(--muted-2); min-height: 16px; line-height: 1.4; }
+    .card-foot.is-ok { color: var(--emerald); }
+    .card-foot.is-bad { color: var(--rose); }
+
+    .result-stats { margin: 10px 2px 0; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+    .result-stats strong { color: #fff; font-weight: 700; }
+
+    .badge { font-size: 11px; font-weight: 700; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.05); white-space: nowrap; }
+    .badge-success { color: var(--emerald); border-color: rgba(52, 211, 153, 0.35); background: rgba(52, 211, 153, 0.1); }
+    .badge-solid { color: #fff; background: var(--grad); border: none; box-shadow: 0 8px 22px -8px rgba(217, 70, 239, 0.7); text-decoration: none; transition: transform 0.15s, filter 0.15s; }
+    .badge-solid:hover { transform: translateY(-1px); filter: brightness(1.08); }
+
+    .controls { display: flex; flex-direction: column; gap: 16px; }
+    .control-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
+    .control-block { display: flex; flex-direction: column; gap: 7px; }
+    .control-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--muted-2); font-weight: 700; }
+    .segmented { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.035); flex-wrap: wrap; }
+    .aspect-btn {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 13px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .aspect-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.06); }
+    .aspect-btn.is-active { color: #fff; background: var(--grad); box-shadow: 0 8px 20px -10px rgba(217, 70, 239, 0.8); }
+
+    .mode-nav {
+      display: inline-flex;
+      align-self: center;
+      gap: 6px;
+      padding: 5px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: rgba(255, 255, 255, 0.04);
+      margin-bottom: 2px;
+    }
+    .mode-tab {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 9px 20px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .mode-tab:hover { color: #fff; background: rgba(255, 255, 255, 0.06); }
+    .mode-tab.is-active {
+      color: #fff;
+      background: var(--grad);
+      box-shadow: 0 8px 24px -8px rgba(217, 70, 239, 0.85);
+    }
+    .category-btn {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .category-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.06); }
+    .category-btn.is-active {
+      color: #fff;
+      background: var(--grad);
+      box-shadow: 0 8px 20px -10px rgba(217, 70, 239, 0.8);
+    }
+
+    .ghost-btn {
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 10px 15px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ghost-btn:hover { border-color: var(--border-strong); background: rgba(255, 255, 255, 0.07); transform: translateY(-1px); }
+    .ghost-btn .muted { color: var(--muted-2); font-weight: 500; }
+
+    .chip-groups { display: flex; flex-direction: column; gap: 12px; }
+    .chip-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .chip-group-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--muted-2); font-weight: 700; margin-right: 4px; flex-basis: 100%; }
+    @media (min-width: 720px) { .chip-group-label { flex-basis: auto; } }
+    .scene-chip {
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.035);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 13px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .scene-chip:hover { color: #fff; border-color: rgba(217, 70, 239, 0.5); background: rgba(217, 70, 239, 0.1); transform: translateY(-1px); box-shadow: 0 10px 24px -14px rgba(217, 70, 239, 0.9); }
+    .scene-chip:active { transform: translateY(0); }
+    .scene-chip.is-selected { color: #fff; border-color: transparent; background: var(--grad); box-shadow: 0 10px 26px -12px rgba(217, 70, 239, 0.9); }
+
+    .drawer { border: 1px solid var(--border); border-radius: 18px; background: rgba(255, 255, 255, 0.03); padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    .drawer-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .drawer-note { font-size: 11.5px; color: var(--muted); }
+    .link-btn { background: none; border: none; color: #c4b5fd; font-family: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer; padding: 4px; }
+    .link-btn:hover { text-decoration: underline; }
+    .slider-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 18px; }
+    @media (min-width: 720px) { .slider-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+    .slider-cell label { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 8px; font-weight: 600; gap: 8px; }
+    .slider-val { font-size: 10.5px; color: #c4b5fd; font-weight: 700; }
+    input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); outline: none; cursor: pointer; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 999px; background: var(--grad); border: 2px solid #0b0910; box-shadow: 0 0 0 4px rgba(217, 70, 239, 0.14); cursor: pointer; }
+    input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 999px; background: var(--grad); border: 2px solid #0b0910; cursor: pointer; }
+
+    .prompt-bar { display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; }
+    .prompt-wrap { position: relative; flex: 1; min-width: 240px; display: flex; }
+    .prompt-input {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 16px;
+      padding: 15px 92px 15px 16px;
+      font-family: inherit;
+      font-size: 13.5px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .prompt-input::placeholder { color: var(--muted-2); }
+    .prompt-input:focus { border-color: rgba(217, 70, 239, 0.6); box-shadow: 0 0 0 4px rgba(217, 70, 239, 0.1); }
+    .kbd-hint { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 10px; color: var(--muted-2); border: 1px solid var(--border); border-radius: 7px; padding: 3px 6px; pointer-events: none; background: rgba(0, 0, 0, 0.25); }
+
+    .cta-btn {
+      border: none;
+      border-radius: 16px;
+      padding: 15px 24px;
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #fff;
+      background: var(--grad);
+      cursor: pointer;
+      transition: transform 0.15s, filter 0.15s, box-shadow 0.15s;
+      box-shadow: 0 18px 44px -16px rgba(217, 70, 239, 0.85);
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cta-btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.07); }
+    .cta-btn:active:not(:disabled) { transform: translateY(0); }
+    .cta-btn:disabled { opacity: 0.55; cursor: not-allowed; filter: saturate(0.7); }
+
+    .aspect-hint { font-size: 11.5px; color: #c4b5fd; margin: 0; }
+    .error-box { font-size: 12px; padding: 12px 14px; border-radius: 14px; color: #fecdd3; border: 1px solid rgba(251, 113, 133, 0.4); background: rgba(251, 113, 133, 0.12); }
+
+    .site-footer { position: relative; z-index: 10; text-align: center; font-size: 11px; color: var(--muted-2); padding: 20px; border-top: 1px solid var(--border); margin-top: auto; }
+    .site-footer .dot-sep { margin: 0 8px; color: rgba(255, 255, 255, 0.2); }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+    }
+  </style>
 </head>
-<body class="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col font-sans">
-  <header class="border-b border-zinc-800/80 px-6 py-4 flex items-center justify-between bg-zinc-900/50">
-    <div class="flex items-center gap-2.5">
-      <span class="text-2xl">✨</span>
-      <h1 class="text-lg font-semibold tracking-tight">Fotogenie</h1>
-    </div>
-    <div id="statusBadge" class="text-xs px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30">
-      🟡 Connecting to AI Engine...
-    </div>
-  </header>
-
-  <main class="flex-1 max-w-6xl w-full mx-auto px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-    <div class="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4 flex flex-col justify-between">
-      <div class="flex items-center justify-between mb-3">
-        <span class="text-sm font-medium text-zinc-300">1. Your Reference Photo</span>
-        <span id="lockBadge" class="hidden text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-          ✓ Face, Skin Tone & Body Locked
+<body>
+  <div class="bg-orbs" aria-hidden="true"></div>
+  <div class="app">
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Fotogenie home">
+        <span class="brand-mark" aria-hidden="true">✦</span>
+        <span class="brand-text">
+          <span class="brand-name">Fotogenie</span>
+          <span class="brand-sub">AI Portrait Studio</span>
         </span>
-      </div>
-
-      <label id="dropArea" class="flex-1 min-h-[380px] border-2 border-dashed border-zinc-700 hover:border-violet-500 rounded-xl flex flex-col items-center justify-center cursor-pointer transition relative overflow-hidden bg-zinc-950/60">
-        <input id="fileInput" type="file" accept="image/*" class="hidden" />
-        <div id="uploadPrompt" class="text-center p-6">
-          <div class="text-4xl mb-2">📸</div>
-          <p class="text-sm font-medium text-zinc-200">Click or Drop Reference Photo</p>
-          <p class="text-xs text-zinc-500 mt-1">Face, skin tone & body proportions lock automatically</p>
-        </div>
-        <img id="refPreview" class="hidden w-full h-[420px] object-contain" />
-      </label>
-    </div>
-
-    <div class="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4 flex flex-col justify-between">
-      <div class="flex items-center justify-between mb-3">
-        <span class="text-sm font-medium text-zinc-300">2. Generated Scene</span>
-        <a id="downloadBtn" download="fotogenie-portrait.png" class="hidden text-xs px-3 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-medium transition">
-          ⬇ Download HD
-        </a>
-      </div>
-
-      <div class="flex-1 min-h-[380px] rounded-xl bg-zinc-950/60 border border-zinc-800/80 flex flex-col items-center justify-center relative overflow-hidden">
-        <div id="emptyState" class="text-center p-6 text-zinc-500 text-sm">
-          Your generated full scene will appear here
-        </div>
-        <div id="loadingState" class="hidden text-center p-6">
-          <div class="w-10 h-10 border-4 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-          <p class="text-sm text-zinc-200 font-medium">Rendering 24-Step HQ Scene on RTX 3060...</p>
-          <p class="text-xs text-zinc-400 mt-1">Harmonizing natural lighting, skin pores & facial geometry (~15s)</p>
-        </div>
-        <img id="genOutput" class="hidden w-full h-[420px] object-contain" />
-      </div>
-    </div>
-  </main>
-
-  <section class="max-w-6xl w-full mx-auto px-6 pb-8 space-y-3">
-    <div id="errorBox" class="hidden p-3 rounded-xl bg-red-500/15 border border-red-500/40 text-red-200 text-xs"></div>
-
-    <div class="flex flex-wrap items-center justify-between gap-2">
-      <div class="flex items-center gap-1.5 bg-zinc-900 p-1 rounded-xl border border-zinc-800">
-        <button data-aspect="4:5" class="aspect-btn px-3 py-1 rounded-lg text-xs font-medium bg-violet-600 text-white">Portrait 4:5</button>
-        <button data-aspect="9:16" class="aspect-btn px-3 py-1 rounded-lg text-xs font-medium text-zinc-400 hover:text-white">Full Body 9:16</button>
-        <button data-aspect="1:1" class="aspect-btn px-3 py-1 rounded-lg text-xs font-medium text-zinc-400 hover:text-white">Square 1:1</button>
-        <button data-aspect="16:9" class="aspect-btn px-3 py-1 rounded-lg text-xs font-medium text-zinc-400 hover:text-white">Cinema 16:9</button>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-1.5">
-        <button class="scene-chip text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300" data-text="full body cinematic portrait in a luxury modern lounge, soft ambient warm lighting">Luxury Lounge</button>
-        <button class="scene-chip text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300" data-text="standing outdoors in a sunlit garden at golden hour, soft natural sunlight, bokeh background">Golden Hour</button>
-        <button class="scene-chip text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300" data-text="professional studio portrait photoshoot, diffused softbox lighting, elegant outfit">Studio Shoot</button>
-        <button class="scene-chip text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300" data-text="walking on a tropical beach at sunset, gentle ocean waves, warm golden breeze">Beach Sunset</button>
-      </div>
-
-      <button id="toggleSlidersBtn" class="text-xs px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200">
-        ⚙ Adjust Body (Optional)
-      </button>
-    </div>
-
-    <div id="slidersDrawer" class="hidden bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4">
-      <div class="flex items-center justify-between mb-3">
-        <span class="text-xs font-medium text-zinc-300">Leave at 0 to match your photo automatically, or slide to adjust:</span>
-        <button id="resetSlidersBtn" class="text-xs text-violet-400 hover:underline">Reset All to Match Photo</button>
-      </div>
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-xs">
-        <div>
-          <label class="block text-zinc-400 mb-1">Height: <span id="val-height">Match</span></label>
-          <input id="sl-height" type="range" min="-2" max="2" step="0.5" value="0" class="w-full accent-violet-500" />
-        </div>
-        <div>
-          <label class="block text-zinc-400 mb-1">Bust Size: <span id="val-bust">Match</span></label>
-          <input id="sl-bust" type="range" min="-2" max="2" step="0.5" value="0" class="w-full accent-violet-500" />
-        </div>
-        <div>
-          <label class="block text-zinc-400 mb-1">Waist: <span id="val-waist">Match</span></label>
-          <input id="sl-waist" type="range" min="-2" max="2" step="0.5" value="0" class="w-full accent-violet-500" />
-        </div>
-        <div>
-          <label class="block text-zinc-400 mb-1">Hips: <span id="val-hips">Match</span></label>
-          <input id="sl-hips" type="range" min="-2" max="2" step="0.5" value="0" class="w-full accent-violet-500" />
-        </div>
-        <div>
-          <label class="block text-zinc-400 mb-1">Build: <span id="val-build">Match</span></label>
-          <input id="sl-build" type="range" min="-2" max="2" step="0.5" value="0" class="w-full accent-violet-500" />
+      </a>
+      <div class="header-right">
+        <span class="header-note">Private · Runs on your RTX 3060</span>
+        <div id="statusBadge" class="status-pill status-connecting" role="status" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="statusText">Connecting…</span>
         </div>
       </div>
-    </div>
+    </header>
 
-    <div class="flex gap-3">
-      <input id="promptInput" type="text" placeholder="Describe the scene, outfit, pose, or any body changes..." class="flex-1 bg-zinc-900 border border-zinc-700 focus:border-violet-500 rounded-xl px-4 py-3 text-sm outline-none" />
-      <button id="generateBtn" class="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-sm transition whitespace-nowrap">
-        ✨ Generate Scene
-      </button>
-    </div>
-  </section>
+    <main class="studio-main">
+      <section class="stage-grid" aria-label="Studio canvas">
+        <article class="glass-card stage-card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="step-badge">01</span>
+              <h2>Reference Photo</h2>
+            </div>
+            <span id="lockBadge" class="badge badge-success hidden">✓ Face detected</span>
+          </div>
+          <label id="dropArea" class="dropzone" for="fileInput">
+            <input id="fileInput" type="file" accept="image/*" class="hidden" aria-label="Choose a reference photo" />
+            <div id="uploadPrompt" class="dropzone-prompt">
+              <span class="dropzone-icon" aria-hidden="true">✦</span>
+              <p class="dropzone-title">Drop your portrait here</p>
+              <p class="dropzone-sub">Click, drag &amp; drop, or paste · JPG, PNG or HEIC</p>
+              <span class="dropzone-cta">Choose a photo</span>
+            </div>
+            <img id="refPreview" alt="Reference photo preview" class="hidden preview-img" />
+          </label>
+          <p id="refStatus" class="card-foot">Face detection runs before any generation.</p>
+        </article>
+
+        <article class="glass-card stage-card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="step-badge">02</span>
+              <h2>Generated Scene</h2>
+            </div>
+            <a id="downloadBtn" download="fotogenie-portrait.png" class="badge badge-solid hidden">⬇ Download HD</a>
+          </div>
+          <div class="result-frame">
+            <div id="emptyState" class="empty-state">
+              <span class="empty-icon" aria-hidden="true">◇</span>
+              <p>Your generated scene will appear here.</p>
+              <p class="muted">Identity-verified · full resolution</p>
+            </div>
+            <div id="loadingState" class="loading-state hidden">
+              <div class="shimmer" aria-hidden="true"></div>
+              <div class="loading-content">
+                <div class="spinner" aria-hidden="true"></div>
+                <p id="loadingText" class="loading-title">Rendering your scene…</p>
+                <p class="loading-sub">Usually 2–4 min including identity verification. Keep this tab open.</p>
+              </div>
+            </div>
+            <img id="genOutput" alt="Generated scene" class="hidden preview-img" />
+          </div>
+          <p id="resultStats" class="result-stats hidden"></p>
+        </article>
+      </section>
+
+      <nav class="mode-nav" role="tablist" aria-label="Studio Mode">
+        <button id="tabNewScene" type="button" role="tab" aria-selected="true" class="mode-tab is-active">✦ New Scene</button>
+        <button id="tabDressSwap" type="button" role="tab" aria-selected="false" class="mode-tab">👗 Dress Swap</button>
+      </nav>
+
+      <section class="controls" aria-label="Scene controls">
+        <div id="errorBox" role="alert" aria-live="polite" class="error-box hidden"></div>
+
+        <div id="aspectRow" class="control-row">
+          <div class="control-block">
+            <span class="control-label">Aspect</span>
+            <div class="segmented" role="group" aria-label="Aspect ratio">
+              <button type="button" data-aspect="4:5" class="aspect-btn is-active">Portrait 4:5</button>
+              <button type="button" data-aspect="9:16" class="aspect-btn">Full Body 9:16</button>
+              <button type="button" data-aspect="1:1" class="aspect-btn">Square 1:1</button>
+              <button type="button" data-aspect="16:9" class="aspect-btn">Cinema 16:9</button>
+            </div>
+          </div>
+          <button id="toggleSlidersBtn" type="button" class="ghost-btn">⚙ Adjust body <span class="muted">(optional)</span></button>
+        </div>
+
+        <div id="dressSwapRow" class="control-row hidden">
+          <div class="control-block">
+            <span class="control-label">Garment Category</span>
+            <div class="segmented" role="group" aria-label="Garment Category">
+              <button type="button" data-cat="one-pieces" class="category-btn is-active">Full Dress / One-Piece</button>
+              <button type="button" data-cat="tops" class="category-btn">Top / Blazer / Shirt</button>
+              <button type="button" data-cat="bottoms" class="category-btn">Bottom / Skirt / Pants</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="chip-groups" id="chipGroups"></div>
+
+        <div id="slidersDrawer" class="drawer hidden">
+          <div class="drawer-head">
+            <span class="drawer-note">Leave at 0 to match your photo automatically, or slide to adjust:</span>
+            <button id="resetSlidersBtn" type="button" class="link-btn">Reset all to match photo</button>
+          </div>
+          <div class="slider-grid">
+            <div class="slider-cell">
+              <label for="sl-height">Height <span id="val-height" class="slider-val">Match</span></label>
+              <input id="sl-height" type="range" min="-2" max="2" step="0.5" value="0" />
+            </div>
+            <div class="slider-cell">
+              <label for="sl-bust">Bust size <span id="val-bust" class="slider-val">Match</span></label>
+              <input id="sl-bust" type="range" min="-2" max="2" step="0.5" value="0" />
+            </div>
+            <div class="slider-cell">
+              <label for="sl-waist">Waist <span id="val-waist" class="slider-val">Match</span></label>
+              <input id="sl-waist" type="range" min="-2" max="2" step="0.5" value="0" />
+            </div>
+            <div class="slider-cell">
+              <label for="sl-hips">Hips <span id="val-hips" class="slider-val">Match</span></label>
+              <input id="sl-hips" type="range" min="-2" max="2" step="0.5" value="0" />
+            </div>
+            <div class="slider-cell">
+              <label for="sl-build">Build <span id="val-build" class="slider-val">Match</span></label>
+              <input id="sl-build" type="range" min="-2" max="2" step="0.5" value="0" />
+            </div>
+          </div>
+        </div>
+
+        <div class="prompt-bar">
+          <div class="prompt-wrap">
+            <input id="promptInput" type="text" placeholder="Describe the scene, outfit, pose, or any body changes…" class="prompt-input" autocomplete="off" />
+            <span class="kbd-hint" aria-hidden="true">↵ generate</span>
+          </div>
+          <button id="generateBtn" type="button" class="cta-btn">✦ Generate Scene</button>
+        </div>
+        <p id="aspectHint" class="aspect-hint hidden"></p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Fotogenie</span><span class="dot-sep">·</span><span>Local AI studio — nothing leaves this machine</span><span class="dot-sep">·</span><span>Identity-verified portraits</span>
+    </footer>
+  </div>
 
   <script>
-    let selectedFile = null;
-    let selectedAspect = "4:5";
+  (function () {
+    'use strict';
 
-    const fileInput = document.getElementById("fileInput");
-    const refPreview = document.getElementById("refPreview");
-    const uploadPrompt = document.getElementById("uploadPrompt");
-    const lockBadge = document.getElementById("lockBadge");
-    const genOutput = document.getElementById("genOutput");
-    const emptyState = document.getElementById("emptyState");
-    const loadingState = document.getElementById("loadingState");
-    const downloadBtn = document.getElementById("downloadBtn");
-    const errorBox = document.getElementById("errorBox");
+    var selectedFile = null;
+    var selectedAspect = '4:5';
+    var activeMode = 'scene';
+    var selectedCategory = 'one-pieces';
+    var faceDetected = false;
+    var isGenerating = false;
+    var preflightSeq = 0;
+    var previewUrl = null;
+    var lastBlobUrl = null;
+    var loadingTimer = null;
+    var loadingIdx = 0;
 
-    fileInput.addEventListener("change", (e) => {
-      if (e.target.files && e.target.files[0]) {
-        selectedFile = e.target.files[0];
-        refPreview.src = URL.createObjectURL(selectedFile);
-        refPreview.classList.remove("hidden");
-        uploadPrompt.classList.add("hidden");
-        lockBadge.classList.remove("hidden");
+    var tabNewScene = document.getElementById('tabNewScene');
+    var tabDressSwap = document.getElementById('tabDressSwap');
+    var aspectRow = document.getElementById('aspectRow');
+    var dressSwapRow = document.getElementById('dressSwapRow');
+    var fileInput = document.getElementById('fileInput');
+    var dropArea = document.getElementById('dropArea');
+    var refPreview = document.getElementById('refPreview');
+    var uploadPrompt = document.getElementById('uploadPrompt');
+    var lockBadge = document.getElementById('lockBadge');
+    var refStatus = document.getElementById('refStatus');
+    var genOutput = document.getElementById('genOutput');
+    var emptyState = document.getElementById('emptyState');
+    var loadingState = document.getElementById('loadingState');
+    var loadingText = document.getElementById('loadingText');
+    var downloadBtn = document.getElementById('downloadBtn');
+    var resultStats = document.getElementById('resultStats');
+    var errorBox = document.getElementById('errorBox');
+    var generateBtn = document.getElementById('generateBtn');
+    var aspectHint = document.getElementById('aspectHint');
+    var promptInput = document.getElementById('promptInput');
+    var slidersDrawer = document.getElementById('slidersDrawer');
+
+    var LOADING_MSGS = [
+      'Rendering your scene…',
+      'Sampling the portrait…',
+      'Locking identity with FaceID…',
+      'Adding skin texture and pores…',
+      'Verifying the face match…'
+    ];
+
+    var DRESS_LOADING_MSGS = [
+      'Segmenting clothing mask…',
+      'Protecting face & hair boundaries…',
+      'Inpainting replacement dress…',
+      'Rendering textile folds and drape…',
+      'Verifying identity & skin tone…'
+    ];
+
+    var SCENES = [
+      {
+        cat: 'Editorial',
+        items: [
+          { label: 'Luxury Lounge', text: 'full-body fashion photograph in a luxury modern lounge, wearing a tailored outfit, soft ambient warm lighting' },
+          { label: 'Golden Hour', text: 'standing outdoors in a sunlit garden at golden hour, wearing a flowing summer dress, soft natural sunlight, bokeh background' },
+          { label: 'Studio Shoot', text: 'professional studio portrait photoshoot, diffused softbox lighting, wearing an elegant outfit' },
+          { label: 'Beach Sunset', text: 'walking on a tropical beach at sunset, wearing a linen outfit, gentle ocean waves, warm golden breeze' },
+          { label: 'Banarasi Saree', text: 'full-body traditional Banarasi saree fashion photograph, elegant fabric, studio lighting' }
+        ]
+      },
+      {
+        cat: 'Glamour',
+        items: [
+          { label: 'Sultry Glamour', text: 'full-body glamour editorial in a sultry black evening gown with an open back and plunging neckline, shimmering satin, dramatic low-key studio spotlights, confident seductive pose, Vogue cover lighting' },
+          { label: 'Silk Slip', text: 'sultry studio portrait in a fitted champagne satin slip dress, moody low-key lighting, soft rim light, smoky atmosphere, sensual confident gaze, editorial fashion photography' },
+          { label: 'Boudoir Glow', text: 'elegant boudoir portrait in a silk robe with soft draping, warm candlelight glow, intimate luxury bedroom, golden skin highlights, tasteful sensual glamour photography' }
+        ]
+      }
+    ];
+
+    var DRESS_PRESETS = [
+      {
+        cat: 'Dresses & Gowns',
+        items: [
+          { label: 'Emerald Silk Saree', text: 'luxury emerald green silk saree with intricate gold zardozi embroidery border, pleated drape, matching raw silk blouse' },
+          { label: 'Royal Blue Blazer', text: 'tailored royal blue luxury velvet evening blazer, silk lapels, sharp modern formal silhouette' },
+          { label: 'Crimson Satin Gown', text: 'floor-length scarlet crimson silk evening gown, elegant asymmetrical shoulder drape, flowing fabric sheen' },
+          { label: 'Champagne Slip', text: 'minimalist champagne gold silk slip dress, delicate straps, subtle luminous sheen, fluid drape' },
+          { label: 'Ivory Linen Suit', text: 'relaxed ivory white tailored linen pantsuit, breathable weave, soft structured lapels, summery resort styling' }
+        ]
+      }
+    ];
+
+    function setError(message) {
+      errorBox.textContent = message;
+      errorBox.classList.remove('hidden');
+    }
+
+    function clearError() {
+      errorBox.textContent = '';
+      errorBox.classList.add('hidden');
+    }
+
+    function setReadyBadge(ok, text) {
+      lockBadge.classList.toggle('hidden', !ok);
+      if (text) { lockBadge.textContent = text; }
+    }
+
+    function revokePreview() {
+      if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
+    }
+
+    function resetResult() {
+      emptyState.classList.remove('hidden');
+      genOutput.classList.add('hidden');
+      genOutput.removeAttribute('src');
+      downloadBtn.classList.add('hidden');
+      downloadBtn.removeAttribute('href');
+      resultStats.classList.add('hidden');
+      resultStats.textContent = '';
+      clearError();
+      if (lastBlobUrl) { URL.revokeObjectURL(lastBlobUrl); lastBlobUrl = null; }
+    }
+
+    function startLoading() {
+      loadingIdx = 0;
+      var msgs = activeMode === 'dress-swap' ? DRESS_LOADING_MSGS : LOADING_MSGS;
+      loadingText.textContent = msgs[0];
+      loadingState.classList.remove('hidden');
+      if (loadingTimer) { clearInterval(loadingTimer); }
+      loadingTimer = setInterval(function () {
+        loadingIdx = (loadingIdx + 1) % msgs.length;
+        loadingText.textContent = msgs[loadingIdx];
+      }, 4200);
+    }
+
+    function stopLoading() {
+      if (loadingTimer) { clearInterval(loadingTimer); loadingTimer = null; }
+      loadingState.classList.add('hidden');
+    }
+
+    function showAspectHint(message) {
+      aspectHint.textContent = message;
+      aspectHint.classList.remove('hidden');
+      setTimeout(function () { aspectHint.classList.add('hidden'); }, 5200);
+    }
+
+    function handleFile(file) {
+      if (!file) { return; }
+      if (file.type && file.type.indexOf('image/') !== 0) {
+        setError('Please choose a JPG, PNG or HEIC image.');
+        return;
+      }
+      clearError();
+      selectedFile = file;
+      faceDetected = false;
+      setReadyBadge(false, '');
+      refStatus.textContent = 'Checking face…';
+      refStatus.className = 'card-foot';
+      revokePreview();
+      previewUrl = URL.createObjectURL(file);
+      refPreview.src = previewUrl;
+      refPreview.classList.remove('hidden');
+      uploadPrompt.classList.add('hidden');
+      resetResult();
+      preflight(file);
+    }
+
+    async function preflight(file) {
+      var seq = ++preflightSeq;
+      var fd = new FormData();
+      fd.append('image', file);
+      try {
+        var resp = await fetch('/api/preflight', { method: 'POST', body: fd });
+        var data = await resp.json().catch(function () { return {}; });
+        if (seq !== preflightSeq) { return; }
+        if (!resp.ok) {
+          var preflightError = new Error(data.detail || ('Could not read this photo (' + resp.status + ').'));
+          preflightError.status = resp.status;
+          throw preflightError;
+        }
+        faceDetected = true;
+        setReadyBadge(true, '✓ Face detected');
+        refStatus.textContent = '✓ Face detected. Skin tone read from the face.';
+        refStatus.className = 'card-foot is-ok';
+        if (data.warnings && data.warnings.length) { setError(data.warnings.join(' ')); }
+      } catch (err) {
+        if (seq !== preflightSeq) { return; }
+        faceDetected = false;
+        setReadyBadge(false, '');
+        refStatus.textContent = (err.status === 422)
+          ? 'No usable face found in this photo.'
+          : 'Could not read this photo.';
+        refStatus.className = 'card-foot is-bad';
+        setError(err.message || 'Could not read this photo.');
+      }
+    }
+
+    function renderChips(groups) {
+      var host = document.getElementById('chipGroups');
+      host.innerHTML = '';
+      (groups || SCENES).forEach(function (group) {
+        var wrap = document.createElement('div');
+        wrap.className = 'chip-group';
+        var label = document.createElement('span');
+        label.className = 'chip-group-label';
+        label.textContent = group.cat;
+        wrap.appendChild(label);
+        group.items.forEach(function (item) {
+          var chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'scene-chip';
+          chip.textContent = item.label;
+          chip.addEventListener('click', function () {
+            promptInput.value = item.text;
+            clearError();
+            document.querySelectorAll('.scene-chip').forEach(function (c) { c.classList.remove('is-selected'); });
+            chip.classList.add('is-selected');
+          });
+          wrap.appendChild(chip);
+        });
+        host.appendChild(wrap);
+      });
+    }
+
+    function setMode(mode) {
+      activeMode = mode;
+      clearError();
+      if (mode === 'scene') {
+        tabNewScene.classList.add('is-active');
+        tabNewScene.setAttribute('aria-selected', 'true');
+        tabDressSwap.classList.remove('is-active');
+        tabDressSwap.setAttribute('aria-selected', 'false');
+        aspectRow.classList.remove('hidden');
+        dressSwapRow.classList.add('hidden');
+        promptInput.placeholder = 'Describe the scene, outfit, pose, or any body changes…';
+        generateBtn.textContent = '✦ Generate Scene';
+        renderChips(SCENES);
+      } else {
+        tabDressSwap.classList.add('is-active');
+        tabDressSwap.setAttribute('aria-selected', 'true');
+        tabNewScene.classList.remove('is-active');
+        tabNewScene.setAttribute('aria-selected', 'false');
+        aspectRow.classList.add('hidden');
+        slidersDrawer.classList.add('hidden');
+        dressSwapRow.classList.remove('hidden');
+        promptInput.placeholder = 'Describe replacement dress, fabric, color, and cut (e.g. royal blue velvet evening gown)...';
+        generateBtn.textContent = '👗 Swap Dress';
+        renderChips(DRESS_PRESETS);
+      }
+    }
+
+    tabNewScene.addEventListener('click', function () { setMode('scene'); });
+    tabDressSwap.addEventListener('click', function () { setMode('dress-swap'); });
+
+    document.querySelectorAll('.category-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        selectedCategory = btn.dataset.cat;
+        document.querySelectorAll('.category-btn').forEach(function (b) {
+          b.classList.toggle('is-active', b.dataset.cat === selectedCategory);
+        });
+      });
+    });
+
+    fileInput.addEventListener('change', function (event) {
+      var file = event.target.files && event.target.files[0];
+      if (file) { handleFile(file); }
+    });
+
+    ['dragenter', 'dragover'].forEach(function (name) {
+      dropArea.addEventListener(name, function (event) {
+        event.preventDefault();
+        dropArea.classList.add('is-drag');
+      });
+    });
+    ['dragleave', 'drop'].forEach(function (name) {
+      dropArea.addEventListener(name, function (event) {
+        event.preventDefault();
+        dropArea.classList.remove('is-drag');
+      });
+    });
+    dropArea.addEventListener('drop', function (event) {
+      var file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+      if (file) { handleFile(file); }
+    });
+    document.addEventListener('paste', function (event) {
+      var items = event.clipboardData && event.clipboardData.items;
+      if (!items) { return; }
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].type && items[i].type.indexOf('image/') === 0) {
+          var file = items[i].getAsFile();
+          if (file) { handleFile(file); }
+          break;
+        }
       }
     });
 
-    document.querySelectorAll(".aspect-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll(".aspect-btn").forEach(b => {
-          b.className = "aspect-btn px-3 py-1 rounded-lg text-xs font-medium text-zinc-400 hover:text-white";
-        });
-        btn.className = "aspect-btn px-3 py-1 rounded-lg text-xs font-medium bg-violet-600 text-white";
-        selectedAspect = btn.dataset.aspect;
+    function selectAspect(value) {
+      selectedAspect = value;
+      document.querySelectorAll('.aspect-btn').forEach(function (btn) {
+        btn.classList.toggle('is-active', btn.dataset.aspect === value);
+      });
+    }
+
+    document.querySelectorAll('.aspect-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { selectAspect(btn.dataset.aspect); });
+    });
+
+    document.getElementById('toggleSlidersBtn').addEventListener('click', function () {
+      slidersDrawer.classList.toggle('hidden');
+    });
+
+    var sliderKeys = ['height', 'bust', 'waist', 'hips', 'build'];
+    sliderKeys.forEach(function (key) {
+      var el = document.getElementById('sl-' + key);
+      var label = document.getElementById('val-' + key);
+      el.addEventListener('input', function () {
+        label.textContent = el.value === '0' ? 'Match' : (Number(el.value) > 0 ? '+' + el.value : el.value);
       });
     });
 
-    document.querySelectorAll(".scene-chip").forEach(chip => {
-      chip.addEventListener("click", () => {
-        document.getElementById("promptInput").value = chip.dataset.text;
+    document.getElementById('resetSlidersBtn').addEventListener('click', function () {
+      sliderKeys.forEach(function (key) {
+        document.getElementById('sl-' + key).value = '0';
+        document.getElementById('val-' + key).textContent = 'Match';
       });
     });
 
-    document.getElementById("toggleSlidersBtn").addEventListener("click", () => {
-      document.getElementById("slidersDrawer").classList.toggle("hidden");
-    });
-
-    const sliderKeys = ["height", "bust", "waist", "hips", "build"];
-    sliderKeys.forEach(k => {
-      const el = document.getElementById(`sl-${k}`);
-      const lbl = document.getElementById(`val-${k}`);
-      el.addEventListener("input", () => {
-        lbl.textContent = el.value === "0" ? "Match" : (el.value > 0 ? `+${el.value}` : el.value);
-      });
-    });
-
-    document.getElementById("resetSlidersBtn").addEventListener("click", () => {
-      sliderKeys.forEach(k => {
-        document.getElementById(`sl-${k}`).value = "0";
-        document.getElementById(`val-${k}`).textContent = "Match";
-      });
-    });
+    function maybeSwitchAspect(prompt) {
+      var lower = prompt.toLowerCase();
+      var fullBody = /full body|full-body|head to toe|head-to-toe|standing|walking/.test(lower);
+      if (fullBody && (selectedAspect === '4:5' || selectedAspect === '1:1')) {
+        selectAspect('9:16');
+        showAspectHint('Switched to Full Body 9:16 for a full-body scene.');
+      }
+    }
 
     async function pollStatus() {
+      var badge = document.getElementById('statusBadge');
+      var text = document.getElementById('statusText');
       try {
-        const r = await fetch("/api/status");
-        const d = await r.json();
-        const badge = document.getElementById("statusBadge");
-        if (d.online) {
-          badge.className = "text-xs px-3 py-1.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30";
-          badge.textContent = "🟢 AI Ready (RTX 3060)";
-        } else {
-          badge.className = "text-xs px-3 py-1.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30";
-          badge.textContent = "🟡 Starting ComfyUI Engine...";
+        var resp = await fetch('/api/status');
+        var data = await resp.json();
+        if (data.busy) {
+          badge.className = 'status-pill status-busy';
+          var count = data.queue_count || 1;
+          text.textContent = count > 1 ? 'Queued (#' + count + ' in line)' : 'Generating…';
+          badge.title = 'Sequential generation on RTX 3060';
+          if (isGenerating && count > 1) {
+            generateBtn.textContent = 'Queued (#' + count + ' in line) · ~15s';
+          }
+          return;
         }
-      } catch {}
+        if (data.ready && data.face_engine) {
+          badge.className = 'status-pill status-ready';
+          text.textContent = 'AI Ready';
+          badge.title = '';
+        } else if (data.online) {
+          badge.className = 'status-pill status-connecting';
+          text.textContent = 'Engine not ready';
+          badge.title = data.error || '';
+        } else {
+          badge.className = 'status-pill status-error';
+          text.textContent = 'Start ComfyUI';
+          badge.title = data.error || '';
+        }
+      } catch (err) {
+        badge.className = 'status-pill status-error';
+        text.textContent = 'Backend offline';
+        badge.title = '';
+      }
     }
     setInterval(pollStatus, 4000);
     pollStatus();
 
-    document.getElementById("generateBtn").addEventListener("click", async () => {
-      errorBox.classList.add("hidden");
+    async function generate() {
+      if (isGenerating) { return; }
+      clearError();
       if (!selectedFile) {
-        errorBox.textContent = "Please upload a reference photo on the left first.";
-        errorBox.classList.remove("hidden");
+        setError('Please upload a reference photo on the left first.');
         return;
       }
-      const prompt = document.getElementById("promptInput").value.trim() || "cinematic portrait photoshoot, soft natural lighting";
-      const sliders = {};
-      sliderKeys.forEach(k => sliders[k] = parseFloat(document.getElementById(`sl-${k}`).value));
+      if (!faceDetected) {
+        setError('That photo does not have a usable face. Use a clear, front-facing portrait.');
+        return;
+      }
 
-      const fd = new FormData();
-      fd.append("image", selectedFile);
-      fd.append("prompt", prompt);
-      fd.append("aspect", selectedAspect);
-      fd.append("sliders", JSON.stringify(sliders));
+      if (activeMode === 'dress-swap') {
+        var dressPrompt = promptInput.value.trim();
+        if (!dressPrompt) {
+          setError('Please describe the replacement dress or outfit (e.g. royal blue evening gown).');
+          return;
+        }
+        var swapForm = new FormData();
+        swapForm.append('image', selectedFile);
+        swapForm.append('dress_prompt', dressPrompt);
+        swapForm.append('category', selectedCategory);
 
-      emptyState.classList.add("hidden");
-      genOutput.classList.add("hidden");
-      loadingState.classList.remove("hidden");
-      downloadBtn.classList.add("hidden");
+        isGenerating = true;
+        generateBtn.disabled = true;
+        generateBtn.textContent = 'Swapping dress…';
+        emptyState.classList.add('hidden');
+        genOutput.classList.add('hidden');
+        downloadBtn.classList.add('hidden');
+        resultStats.classList.add('hidden');
+        resultStats.textContent = '';
+        startLoading();
+
+        try {
+          var sResp = await fetch('/api/dress-swap', { method: 'POST', body: swapForm });
+          var sData = await sResp.json().catch(function () { return {}; });
+          if (!sResp.ok) {
+            throw new Error(sData.detail || ('Dress swap failed (' + sResp.status + ').'));
+          }
+          genOutput.src = sData.image_base64;
+          genOutput.classList.remove('hidden');
+          stopLoading();
+
+          var b64s = String(sData.image_base64).split(',')[1] || '';
+          var binarys = atob(b64s);
+          var bytess = new Uint8Array(binarys.length);
+          for (var si = 0; si < binarys.length; si++) { bytess[si] = binarys.charCodeAt(si); }
+          var blobs = new Blob([bytess], { type: 'image/png' });
+          if (lastBlobUrl) { URL.revokeObjectURL(lastBlobUrl); }
+          lastBlobUrl = URL.createObjectURL(blobs);
+          downloadBtn.href = lastBlobUrl;
+          downloadBtn.download = 'fotogenie_dress_swap_' + (sData.seed || 'out') + '.png';
+          downloadBtn.classList.remove('hidden');
+
+          var sSimPct = (typeof sData.identity_match_percent === 'number')
+            ? sData.identity_match_percent
+            : Math.round((sData.identity_similarity || 0) * 1000) / 10;
+          var sStats = ['Dress Swapped', 'Face match ' + sSimPct.toFixed(1) + '%'];
+          if (typeof sData.skin_delta_chroma === 'number') {
+            sStats.push('Skin tone Δ' + sData.skin_delta_chroma.toFixed(1));
+          }
+          if (sData.checkpoint) {
+            sStats.push(String(sData.checkpoint).replace(/\.safetensors$/i, ''));
+          }
+          resultStats.textContent = sStats.join(' · ');
+          resultStats.classList.remove('hidden');
+        } catch (err) {
+          setError(err.message || 'Dress swap failed.');
+          stopLoading();
+          emptyState.classList.remove('hidden');
+        } finally {
+          isGenerating = false;
+          generateBtn.disabled = false;
+          generateBtn.textContent = '👗 Swap Dress';
+        }
+        return;
+      }
+
+      var prompt = promptInput.value.trim() || 'cinematic portrait photoshoot, soft natural lighting';
+      maybeSwitchAspect(prompt);
+
+      var sliders = {};
+      sliderKeys.forEach(function (key) {
+        sliders[key] = Number(document.getElementById('sl-' + key).value);
+      });
+
+      var form = new FormData();
+      form.append('image', selectedFile);
+      form.append('prompt', prompt);
+      form.append('aspect', selectedAspect);
+      form.append('sliders', JSON.stringify(sliders));
+
+      isGenerating = true;
+      generateBtn.disabled = true;
+      generateBtn.textContent = 'Rendering…';
+      emptyState.classList.add('hidden');
+      genOutput.classList.add('hidden');
+      downloadBtn.classList.add('hidden');
+      resultStats.classList.add('hidden');
+      resultStats.textContent = '';
+      startLoading();
 
       try {
-        const resp = await fetch("/api/generate", { method: "POST", body: fd });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.detail || "Generation failed");
+        var resp = await fetch('/api/generate', { method: 'POST', body: form });
+        var data = await resp.json().catch(function () { return {}; });
+        if (!resp.ok) {
+          throw new Error(data.detail || ('Generation failed (' + resp.status + ').'));
+        }
         genOutput.src = data.image_base64;
-        genOutput.classList.remove("hidden");
-        downloadBtn.href = data.image_base64;
-        downloadBtn.classList.remove("hidden");
+        genOutput.classList.remove('hidden');
+        stopLoading();
+
+        var b64 = String(data.image_base64).split(',')[1] || '';
+        var binary = atob(b64);
+        var bytes = new Uint8Array(binary.length);
+        for (var bi = 0; bi < binary.length; bi++) { bytes[bi] = binary.charCodeAt(bi); }
+        var blob = new Blob([bytes], { type: 'image/png' });
+        if (lastBlobUrl) { URL.revokeObjectURL(lastBlobUrl); }
+        lastBlobUrl = URL.createObjectURL(blob);
+        downloadBtn.href = lastBlobUrl;
+        downloadBtn.download = 'fotogenie_' + data.seed + '_' + data.width + 'x' + data.height + '.png';
+        downloadBtn.classList.remove('hidden');
+
+        var simPct = (typeof data.identity_match_percent === 'number')
+          ? data.identity_match_percent
+          : Math.round((data.identity_similarity || 0) * 1000) / 10;
+        var stats = ['Face match ' + simPct.toFixed(1) + '%'];
+        if (typeof data.skin_delta_chroma === 'number') {
+          stats.push('Skin tone Δ' + data.skin_delta_chroma.toFixed(1));
+        }
+        if (data.checkpoint) {
+          stats.push(String(data.checkpoint).replace(/\.safetensors$/i, ''));
+        }
+        if (data.face_detail_applied) { stats.push('Face detail'); }
+        if (data.rescue_applied) { stats.push('Identity rescue'); }
+        resultStats.textContent = stats.join(' · ');
+        resultStats.classList.remove('hidden');
       } catch (err) {
-        errorBox.textContent = err.message;
-        errorBox.classList.remove("hidden");
-        emptyState.classList.remove("hidden");
+        setError(err.message || 'Generation failed.');
+        stopLoading();
+        emptyState.classList.remove('hidden');
+        genOutput.classList.add('hidden');
+        downloadBtn.classList.add('hidden');
+        resultStats.classList.add('hidden');
       } finally {
-        loadingState.classList.add("hidden");
+        isGenerating = false;
+        generateBtn.disabled = false;
+        generateBtn.textContent = (activeMode === 'dress-swap') ? '👗 Swap Dress' : '✦ Generate Scene';
+      }
+    }
+
+    generateBtn.addEventListener('click', generate);
+    promptInput.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        generate();
       }
     });
+
+    window.addEventListener('beforeunload', function () {
+      if (previewUrl) { URL.revokeObjectURL(previewUrl); }
+      if (lastBlobUrl) { URL.revokeObjectURL(lastBlobUrl); }
+      if (loadingTimer) { clearInterval(loadingTimer); }
+    });
+
+    renderChips();
+  })();
   </script>
 </body>
 </html>

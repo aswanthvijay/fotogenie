@@ -1,5 +1,5 @@
 $ErrorActionPreference = "Stop"
-$root = "D:\Fotogenie"
+$root = $PSScriptRoot
 Set-Location $root
 
 Write-Host "=== [1/5] Checking aria2c for high-speed model downloads ===" -ForegroundColor Cyan
@@ -31,7 +31,7 @@ $pip = "$root\venv\Scripts\pip.exe"
 
 & $py -m pip install --upgrade pip wheel setuptools
 & $pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-& $pip install "numpy==1.26.4" "opencv-python-headless==4.10.0.84" "opencv-contrib-python==4.10.0.84" "ml-dtypes==0.5.4" fastapi uvicorn python-multipart httpx websockets pillow mediapipe scikit-image onnxruntime-gpu
+& $pip install "numpy==1.26.4" "opencv-contrib-python-headless==4.10.0.84" fastapi uvicorn python-multipart httpx websockets pillow pillow-heif onnx onnxruntime-gpu spandrel
 
 # Patch PyTorch 2.6 schema inference for Python 3.9+ built-in generic list[T]
 & $py -c "
@@ -88,7 +88,9 @@ $loraDir = "$root\ComfyUI\models\loras"
 $clipDir = "$root\ComfyUI\models\clip_vision"
 $ipaModelDir = "$root\ComfyUI\models\ipadapter"
 $antelopeDir = "$root\ComfyUI\models\insightface\models\antelopev2"
-New-Item -ItemType Directory -Force -Path $ckptDir, $loraDir, $clipDir, $ipaModelDir, $antelopeDir | Out-Null
+$buffaloDir = "$root\ComfyUI\models\insightface\models\buffalo_l"
+$insightfaceHome = "$env:USERPROFILE\.insightface\models"
+New-Item -ItemType Directory -Force -Path $ckptDir, $loraDir, $clipDir, $ipaModelDir, $antelopeDir, $buffaloDir, $insightfaceHome | Out-Null
 
 function Download-File($url, $dir, $outName) {
     $target = Join-Path $dir $outName
@@ -104,7 +106,7 @@ function Download-File($url, $dir, $outName) {
     }
 }
 
-Write-Host "=== [5/5] Downloading Juggernaut-XL, DMD2 4-Step LoRA & FaceID Plus v2 ===" -ForegroundColor Cyan
+Write-Host "=== [5/5] Downloading Juggernaut-XL (fallback), DMD2 4-Step LoRA & FaceID Plus v2 ===" -ForegroundColor Cyan
 Download-File "https://huggingface.co/RunDiffusion/Juggernaut-XL-v9/resolve/main/Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors" $ckptDir "Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors"
 Download-File "https://huggingface.co/tianweiy/DMD2/resolve/main/dmd2_sdxl_4step_lora.safetensors" $loraDir "dmd2_sdxl_4step_lora.safetensors"
 Download-File "https://huggingface.co/h94/IP-Adapter/resolve/main/models/image_encoder/model.safetensors" $clipDir "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"
@@ -114,6 +116,43 @@ Download-File "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adap
 $antelopeFiles = @("1k3d68.onnx", "2d106det.onnx", "genderage.onnx", "glintr100.onnx", "scrfd_10g_bnkps.onnx")
 foreach ($f in $antelopeFiles) {
     Download-File "https://huggingface.co/MonsterMMORPG/tools/resolve/main/$f" $antelopeDir $f
+}
+
+# The IPAdapter FaceID loader in ComfyUI uses buffalo_l, not antelopev2.
+$buffaloFiles = @("1k3d68.onnx", "2d106det.onnx", "genderage.onnx", "w600k_r50.onnx", "det_10g.onnx")
+foreach ($f in $buffaloFiles) {
+    Download-File "https://huggingface.co/MonsterMMORPG/tools/resolve/main/$f" $buffaloDir $f
+}
+
+# Optional CPU identity-rescue models.
+Download-File "https://github.com/facefusion/facefusion-assets/releases/download/models/inswapper_128.onnx" $insightfaceHome "inswapper_128.onnx"
+Download-File "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.4/GFPGANv1.4.pth" $insightfaceHome "GFPGANv1.4.pth"
+
+$required = @(
+    "$ipaModelDir\ip-adapter-faceid-plusv2_sdxl.bin",
+    "$loraDir\ip-adapter-faceid-plusv2_sdxl_lora.safetensors",
+    "$clipDir\CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+    "$buffaloDir\det_10g.onnx",
+    "$buffaloDir\w600k_r50.onnx"
+)
+$missing = $required | Where-Object { -not (Test-Path $_) }
+if ($missing) {
+    Write-Host "=== Missing required model files ===" -ForegroundColor Red
+    $missing | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
+    exit 1
+}
+
+# CyberRealisticXLPlay is the primary checkpoint but lives on Civitai (login
+# required), so it is not downloaded here. Any of these satisfies the runner.
+$checkpoints = @(
+    "$ckptDir\CyberRealisticXLPlay_V10.0_FP16.safetensors",
+    "$ckptDir\Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors",
+    "$ckptDir\RealVisXL_V5.0_fp16.safetensors"
+)
+if (-not ($checkpoints | Where-Object { Test-Path $_ })) {
+    Write-Host "=== No SDXL checkpoint found in $ckptDir ===" -ForegroundColor Red
+    Write-Host "  Place CyberRealisticXLPlay_V10.0_FP16.safetensors there for the primary look." -ForegroundColor Red
+    exit 1
 }
 
 Write-Host "=== Installation Complete! Run .\start_fotogenie.bat to launch Fotogenie ===" -ForegroundColor Green

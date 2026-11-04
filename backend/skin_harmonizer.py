@@ -1,3 +1,12 @@
+"""LEGACY / EXPERIMENTAL - not used by /api/generate.
+
+The old full-body luminance transfer flattened scene lighting and contributed
+to the remastered-image blotches. The FaceID identity guard and the optional
+face_swapper rescue are the supported paths. Keep this module only for
+experiments; do not wire it back into the production response without fixing
+the L* flattening and adding a soft, face-limited mask.
+"""
+
 import cv2
 import numpy as np
 from PIL import Image

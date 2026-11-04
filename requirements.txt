@@ -1,13 +1,21 @@
+# Core web + image stack
 fastapi>=0.110.0
 uvicorn>=0.28.0
 python-multipart>=0.0.9
 httpx>=0.27.0
 websockets>=12.0
 pillow>=10.2.0
+pillow-heif>=0.18.0
 numpy==1.26.4
-opencv-python-headless==4.10.0.84
-opencv-contrib-python==4.10.0.84
-scikit-image>=0.22.0
+opencv-contrib-python-headless==4.10.0.84
 onnxruntime-gpu>=1.17.0
-mediapipe>=0.10.9
-ml-dtypes==0.5.4
+onnx>=1.16.0
+
+# CPU face analysis / identity guard. On Windows install the prebuilt wheel
+# used by install.ps1 instead of building insightface from source.
+insightface==0.7.3
+
+# Optional CPU identity-rescue restoration (GFPGAN via spandrel).
+torch>=2.6.0
+torchvision>=0.21.0
+spandrel==0.4.2
