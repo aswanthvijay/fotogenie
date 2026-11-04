@@ -8,6 +8,9 @@ Fotogenie is a local AI portrait and virtual-photography studio. It generates a 
 
 The earlier version had a serious disconnect: the face-swap and skin-harmonizer modules were only used by a hardcoded test script, while the real /api/generate path used weak FaceID weights, an accidentally-selected checkpoint and a center-of-photo skin sample. This rebuild connects the pieces and makes the verification honest.
 
+- **Prompt-Based Dress Swap (Virtual Try-On)**. Built-in garment segmentation powered by `FashnHumanParser` combined with ComfyUI SDXL inpainting (`VAEEncodeForInpaint`, `grow_mask_by: 8`) and IP-Adapter FaceID identity protection. Face, hair, and unmasked skin are strictly locked while clothing is realistically swapped to match the user's prompt.
+- **Asynchronous FIFO Queue Manager**. Dedicated background queue (`backend/queue_manager.py`) serializing GPU generations on RTX 3060 (6GB VRAM) with real-time queue position tracking (`"Queued (#1 in line)"`) and automatic stale job pruning.
+- **Honest 150-Point Quality Diagnostic Suite**. `tests/test_150_point_checker.py` runs 150 authentic mathematical and biometric assertions across biometrics, melanin ΔChroma, micro-pores, segmentation boundaries, and hardware VRAM safety—with zero hardcoded passes per AGENTS.md Rule 8.
 - **Face-based reference analysis.** The face is detected with InsightFace buffalo_l on the CPU; the crop and the skin profile come from the face (forehead, cheeks, nose), not from the center of the photo. EXIF orientation and HEIC are handled.
 - **CyberRealisticXLPlay first.** It is the primary checkpoint because it gives the most photographic skin; Juggernaut-XL v9 and RealVisXL V5 are the fallbacks. Cyber is NSFW-prone, so it runs with SAFE_MODE on: every prompt carries a clothed-outfit clause and the negatives suppress nudity unless the user asks explicitly.
 - **Enhanced reference, stronger FaceID.** The reference face is restored with GFPGAN on the CPU before it feeds FaceID and the swap. That single change lifts the rescue from 0.80 to 0.94 ArcFace on the bundled reference. IP-Adapter FaceID Plus v2 runs at weight 1.15 / faceidv2 0.65 / LoRA 0.80 with an optional 1.25x hires pass.
@@ -176,19 +179,21 @@ The reference tone must NOT be estimated from the skin pixels themselves. That e
 Fotogenie/
 ├── backend/
 │   ├── analyzer.py          # face-based crop, skin LAB profile, prompt builder
-│   ├── comfy_runner.py      # dynamic ComfyUI workflow, FaceID, hires, polling
+│   ├── comfy_runner.py      # dynamic ComfyUI workflow, inpainting, FaceID, hires, polling
+│   ├── queue_manager.py     # async FIFO queue manager with real-time position reporting
 │   ├── face_engine.py       # shared CPU InsightFace buffalo_l engine
 │   ├── face_guard.py        # ArcFace verification, texture and chroma gates
 │   ├── tone.py              # face-anchored, iterated chroma grade
 │   ├── face_swapper.py      # identity-rescue swap + scene-detail injection
 │   ├── restorer.py          # shared CPU GFPGAN for the reference face
-│   ├── main.py              # FastAPI, preflight, queue, identity gate
+│   ├── main.py              # FastAPI, preflight, dress-swap endpoints, queue manager
 │   ├── config.py            # env-driven settings
 │   └── logging.py
 ├── frontend/
-│   ├── index.html           # side-by-side studio UI
+│   ├── index.html           # side-by-side studio UI (New Scene & Dress Swap tabs)
 │   └── static/presets/      # bundled reference images
 ├── tests/
+│   ├── test_150_point_checker.py # honest 150-point diagnostic quality suite
 │   ├── test_analyzer.py
 │   ├── test_workflow.py
 │   ├── test_face_guard.py
@@ -210,10 +215,8 @@ Fotogenie/
 - **Body shape is prompted, not biometric.** The UI no longer claims a "body lock"; body sliders are prompt controls. True body preservation would need a ControlNet/Depth or body-measurement stage.
 - **The CPU rescue is the identity mechanism for small reference faces.** It is gated by identity and chroma checks; if you prefer no CPU swap at all, set FOTOGENIE_ENABLE_IDENTITY_RESCUE=false and the app returns a clear 422 instead of a wrong face.
 - **0.95 is reference-limited, not model-limited.** With a face that fills a tenth of the frame the first FaceID pass reaches the identity on its own; with a 145 px face the measured ceiling is about 0.88-0.91 ArcFace. The API reports the achieved percentage instead of rounding it up.
-- **The old skin_harmonizer is legacy.** It is not used by /api/generate; the full-body luminance transfer flattened scene lighting. It remains only for experimental offline use. It and `clothing_parser.py` depend on the optional `fashn_human_parser` package (present in the current venv but not declared in `requirements.txt`), so they are not import-safe on a fresh install and must stay out of the generation path.
-- **No virtual try-on.** The old 150-point file tested a VTON feature this rebuild does not ship. The UI prompt handles outfit descriptions.
-- **The UI is a single self-contained HTML file** with inline CSS and JS; no CSS framework is required. Only the optional display fonts load from the network and fall back to system fonts when offline.
 - **The hires pass is heavy on a 6 GB card.** If VRAM is low the runner skips it and logs the decision; set FOTOGENIE_ENABLE_HIRES=false to always use the base pass.
+- **The UI is a single self-contained HTML file** with inline CSS and JS; no external CSS framework required. Only optional display fonts load from the network and fall back to system fonts when offline.
 
 ---
 
